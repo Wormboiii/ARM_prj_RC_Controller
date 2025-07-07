@@ -20,12 +20,14 @@
 #include "main.h"
 #include "adc.h"
 #include "dma.h"
+#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "string.h"
+#include "fnd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,7 +37,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RCLK_HIGH() HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET)
+#define RCLK_LOW() HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,8 +49,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t btrxData;
 uint8_t rxData[10];
+uint8_t btrxData[2];
 uint32_t adcValue[3];
 
 int fwState;
@@ -67,21 +70,34 @@ char cw[] = "d";
 
 char gu[] = "p";
 char gd[] = "l";
+
+
+extern uint8_t Seg_num[];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+void LED_OUT(uint8_t data) {
+	HAL_SPI_Transmit(&hspi1, &data, 1, HAL_MAX_DELAY);
+	RCLK_HIGH();
+//	HAL_Delay(1);
+	RCLK_LOW();
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-	if(huart->Instance == USART2) {
-		HAL_UART_Receive_IT(&huart2, rxData, sizeof(rxData));
+	HAL_UART_Receive_DMA(&huart2, btrxData, 1);
+
+	if(btrxData[0] == 'z') {
+		LED_OUT(~Seg_num[0]);
+	}
+	if(btrxData[0] == 'o') {
+		LED_OUT(~Seg_num[1]);
+	}
+	if(btrxData[0] == 't') {
+		LED_OUT(~Seg_num[2]);
 	}
 }
-//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-//	if(GPIO_Pin == GPIO_PIN_10) {
-//		HAL_UART_Transmit_DMA(&huart2, (uint8_t *)gu, strlen(gu));
-//	}
-//}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -121,12 +137,14 @@ int main(void)
   MX_DMA_Init();
   MX_ADC1_Init();
   MX_USART2_UART_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, adcValue, 3);
   HAL_Delay(1000);
   HAL_UART_Transmit(&huart2, (uint8_t *)atcon, strlen(atcon), HAL_MAX_DELAY);
-  HAL_UART_Receive_IT(&huart2, rxData, sizeof(rxData));
+//  HAL_UART_Receive_IT(&huart2, rxData, sizeof(rxData));
   HAL_Delay(1000);
+  HAL_UART_Receive_DMA(&huart2, btrxData, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -158,7 +176,6 @@ int main(void)
 	 else if(adcValue[2] < 200) {
 		 HAL_UART_Transmit_DMA(&huart2, (uint8_t *)gd, strlen(gd));
 	 }
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
