@@ -37,8 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define RCLK_HIGH() HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET)
-#define RCLK_LOW() HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET)
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -66,11 +65,16 @@ char fw[] = "w";
 char bw[] = "s";
 char ccw[] = "a";
 char cw[] = "d";
+char brk[] = "b";
 
 
 char gu[] = "p";
 char gd[] = "l";
 
+char honk[] = "h";
+
+char leftTurnSig[] = "q";
+char rightTurnSig[] = "e";
 
 extern uint8_t Seg_num[];
 /* USER CODE END PV */
@@ -78,24 +82,32 @@ extern uint8_t Seg_num[];
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-void LED_OUT(uint8_t data) {
-	HAL_SPI_Transmit(&hspi1, &data, 1, HAL_MAX_DELAY);
-	RCLK_HIGH();
-//	HAL_Delay(1);
-	RCLK_LOW();
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if(GPIO_Pin == GPIO_PIN_0) {
+		HAL_UART_Transmit_DMA(&huart2, (uint8_t *)honk, strlen(honk));
+	}
+	if(GPIO_Pin == GPIO_PIN_1) {
+		HAL_UART_Transmit_DMA(&huart2, (uint8_t *)leftTurnSig, strlen(leftTurnSig));
+	}
+	if(GPIO_Pin == GPIO_PIN_12) {
+		HAL_UART_Transmit_DMA(&huart2, (uint8_t *)rightTurnSig, strlen(rightTurnSig));
+	}
+	if(GPIO_Pin == GPIO_PIN_13) {
+		HAL_UART_Transmit_DMA(&huart2, (uint8_t *)brk, strlen(brk));
+	}
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	HAL_UART_Receive_DMA(&huart2, btrxData, 1);
 
 	if(btrxData[0] == 'z') {
-		LED_OUT(~Seg_num[0]);
+		SEG_OUT(0);
 	}
 	if(btrxData[0] == 'o') {
-		LED_OUT(~Seg_num[1]);
+		SEG_OUT(1);
 	}
 	if(btrxData[0] == 't') {
-		LED_OUT(~Seg_num[2]);
+		SEG_OUT(2);
 	}
 }
 /* USER CODE END PFP */
@@ -142,9 +154,10 @@ int main(void)
   HAL_ADC_Start_DMA(&hadc1, adcValue, 3);
   HAL_Delay(1000);
   HAL_UART_Transmit(&huart2, (uint8_t *)atcon, strlen(atcon), HAL_MAX_DELAY);
-//  HAL_UART_Receive_IT(&huart2, rxData, sizeof(rxData));
   HAL_Delay(1000);
   HAL_UART_Receive_DMA(&huart2, btrxData, 1);
+
+  SEG_OUT(0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -246,8 +259,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
