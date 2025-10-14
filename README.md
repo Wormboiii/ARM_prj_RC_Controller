@@ -1,6 +1,6 @@
 [**Main Code**](https://github.com/Wormboiii/ARM_prj_RC_Controller/blob/main/Core/Src/main.c)
 
-Main Code here
+Check all .c files.
 
 --------------------------------------------------------
 [**Car Codes**](https://github.com/Wormboiii/ARM_prj_RC_CAR)
